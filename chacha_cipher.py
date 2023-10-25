@@ -1,19 +1,69 @@
 import tkinter as tk
-from tkinter import filedialog
-from tkinter import messagebox
+from tkinter import filedialog, messagebox
 import struct
+import time
+import os
 
 
-class ChaCha:
+class ChaCha20:
     def __init__(self):
-        pass
+        self.key = os.urandom(32)  # random 256-bit key
+        self.nonce = os.urandom(8)  # random 64-bit nonce
+        self.counter = 0
+
+    def quarterround(self, a, b, c, d):
+        a = (a + b) & 0xFFFFFFFF
+        d = (d ^ a) & 0xFFFFFFFF
+        c = (c + d) & 0xFFFFFFFF
+        b = (b ^ c) & 0xFFFFFFFF
+        a = (a + b) & 0xFFFFFFFF
+        d = (d ^ a) & 0xFFFFFFFF
+        c = (c + d) & 0xFFFFFFFF
+        b = (b ^ c) & 0xFFFFFFFF
+        return a, b, c, d
+
+    def chacha_block(self):
+        x = [0] * 16
+        x[:4] = (0x61707865, 0x3320646E, 0x79622D32, 0x6B206574)
+        x[4:7] = self.nonce
+        x[12] = self.counter & 0xFFFFFFFF
+        x[13] = self.counter >> 32
+        x[14:16] = self.key
+        state = x[:]
+
+        for _ in range(10):
+            for i in range(0, 16, 4):
+                state[i], state[i + 1], state[i + 2], state[i + 3] = self.quarterround(
+                    state[i], state[i + 1], state[i + 2], state[i + 3]
+                )
+            for i in range(16):
+                state[i] = (state[i] + x[i]) & 0xFFFFFFFF
+
+        packed_state = b"".join(struct.pack("<I", item) for item in state)
+
+        return packed_state
+
+    def encrypt(self, plaintext):
+        ciphertext = bytearray()
+        self.counter = 0
+
+        for i in range(0, len(plaintext), 64):
+            keystream = self.chacha_block()
+            for j in range(min(64, len(plaintext) - i)):
+                ciphertext.append(plaintext[i + j] ^ keystream[j])
+            self.counter += 1
+
+        return ciphertext
+
+    def decrypt(self, ciphertext):
+        return self.encrypt(ciphertext)
 
 
 class GUI:
     def __init__(self, root):
         self.root = root
         self.root.title("ChaCha20 Cipher")
-        self.cipher = ChaCha()
+        self.cipher = ChaCha20()
 
         # Input frame
         self.input_frame = tk.Frame(root)
@@ -24,7 +74,7 @@ class GUI:
         )
         self.text_label.grid(row=0, column=0)
         self.loaded_file_label = tk.Label(
-            self.input_frame, text="<No file loaded>", width=35
+            self.input_frame, text="<No file loaded>", width=45
         )
         self.loaded_file_label.grid(row=0, column=1)
 
@@ -33,7 +83,7 @@ class GUI:
         )
         self.output_label.grid(row=1, column=0)
         self.output_file_label = tk.Label(
-            self.input_frame, text="<Decrypt a file..>", width=35
+            self.input_frame, text="<Decrypt a file..>", width=45
         )
         self.output_file_label.grid(row=1, column=1)
 
@@ -65,6 +115,9 @@ class GUI:
         self.decrypt_button.grid(row=1, column=3)
 
         self.loaded_file_content = None
+        self.encrypted_content = None
+        self.decrypted_content = None
+        self.encryption_mode = True  # True for encryption, False for decryption
 
     def load_file(self):
         file_path = filedialog.askopenfilename(filetypes=[("All Files", "*.*")])
@@ -78,17 +131,40 @@ class GUI:
             self.output_file_label.config(text="<Encrypt/Decrypt a file..>")
 
     def save_output(self):
-        output_text = self.output_box.get("1.0", tk.END)
+        if self.encryption_mode and self.encrypted_content:
+            content = self.encrypted_content
+        elif not self.encryption_mode and self.decrypted_content:
+            content = self.decrypted_content
+        else:
+            messagebox.showerror("Error", "No content to save!")
+            return
+
         file_path = filedialog.asksaveasfilename(filetypes=[("All Files", "*.*")])
-        with open(file_path, "w") as file:
-            file.write(output_text)
+        with open(file_path, "wb") as file:
+            file.write(content)
         messagebox.showinfo("Saved", "Output saved successfully!")
 
     def encrypt_file(self):
-        pass
+        if self.loaded_file_content:
+            start = time.time()
+            self.encrypted_content = self.cipher.encrypt(self.loaded_file_content)
+            end = time.time()
+            print(f"Encryption speed: {len(self.loaded_file_content)/(end-start)} B/s")
+            self.output_file_label.config(text="File encrypted!")
+            self.encryption_mode = True
+        else:
+            messagebox.showerror("Error", "No file loaded!")
 
     def decrypt_file(self):
-        pass
+        if self.loaded_file_content:
+            start = time.time()
+            self.decrypted_content = self.cipher.decrypt(self.loaded_file_content)
+            end = time.time()
+            print(f"Decryption speed: {len(self.loaded_file_content)/(end-start)} B/s")
+            self.output_file_label.config(text="File decrypted!")
+            self.encryption_mode = False
+        else:
+            messagebox.showerror("Error", "No file loaded!")
 
 
 if __name__ == "__main__":
