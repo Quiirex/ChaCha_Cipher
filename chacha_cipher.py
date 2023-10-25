@@ -7,9 +7,11 @@ import os
 
 class ChaCha20:
     def __init__(self):
+        self.key = None
+        self.nonce = None
         self.counter = 0
 
-    def quarterround(self, a, b, c, d):
+    def quarter_round(self, a, b, c, d):
         # V tem koraku vsak izmed parametrov (a, b, c, d)
         # sodeluje pri operacijah seštevanja, odštevanja in XOR-a.
         # Rezultat vsake operacije je omejen na 32-bitno vrednost, kar je doseženo z uporabo
@@ -40,7 +42,7 @@ class ChaCha20:
             for i in range(0, 16, 4):
                 # Izvedba 10 krogov četrt-rund na stanju. Vsak krog vpliva na vseh
                 # 16 32-bitnih števil v stanju.
-                state[i], state[i + 1], state[i + 2], state[i + 3] = self.quarterround(
+                state[i], state[i + 1], state[i + 2], state[i + 3] = self.quarter_round(
                     state[i], state[i + 1], state[i + 2], state[i + 3]
                 )
             for i in range(16):
@@ -51,9 +53,7 @@ class ChaCha20:
         packed_state = b"".join(struct.pack("<I", item) for item in state)
         return packed_state
 
-    def encrypt(self, plaintext, key, iv):
-        self.key = key
-        self.nonce = iv
+    def encrypt(self, plaintext):
         ciphertext = bytearray()
         self.counter = 0
 
@@ -66,11 +66,11 @@ class ChaCha20:
 
         return ciphertext
 
-    def decrypt(self, ciphertext, key, iv):
+    def decrypt(self, ciphertext):
         # Dešifriranje se izvaja na enak način kot šifriranje, saj je ChaCha20
         # simetrični algoritem. Znano mora biti enako stanje (ključ, IV) kot pri
         # šifriranju.
-        return self.encrypt(ciphertext, key, iv)
+        return self.encrypt(ciphertext)
 
 
 class GUI:
@@ -92,19 +92,21 @@ class GUI:
         )
         self.loaded_file_label.grid(row=0, column=1)
 
+        self.text_label = tk.Label(
+            self.input_frame, text="Key:", width=8, font=("Helvetica", 13, "bold")
+        )
+        self.text_label.grid(row=2, column=0)
+        self.key_label = tk.Label(self.input_frame, text="<No key loaded>", width=45)
+        self.key_label.grid(row=2, column=1)
+
         self.output_label = tk.Label(
             self.input_frame, text="Output:", width=8, font=("Helvetica", 13, "bold")
         )
         self.output_label.grid(row=1, column=0)
         self.output_file_label = tk.Label(
-            self.input_frame, text="<Decrypt a file..>", width=45
+            self.input_frame, text="<Encrypt/Decrypt a file..>", width=45
         )
         self.output_file_label.grid(row=1, column=1)
-
-        self.save_output_button = tk.Button(
-            self.input_frame, text="Save as..", command=self.save_output, width=5
-        )
-        self.save_output_button.grid(row=1, column=2)
 
         # Button frame
         self.button_frame = tk.Frame(root)
@@ -112,26 +114,69 @@ class GUI:
 
         self.load_file_button = tk.Button(
             self.button_frame,
-            text="Load file..",
+            text="Load File..",
             command=self.load_file,
-            width=10,
+            width=8,
         )
-        self.load_file_button.grid(row=1, column=0)
+        self.load_file_button.grid(row=0, column=1)
 
         self.encrypt_button = tk.Button(
-            self.button_frame, text="Encrypt", command=self.encrypt_file, width=10
+            self.button_frame, text="Encrypt", command=self.encrypt_file, width=8
         )
-        self.encrypt_button.grid(row=1, column=2)
+        self.encrypt_button.grid(row=1, column=0)
 
         self.decrypt_button = tk.Button(
-            self.button_frame, text="Decrypt", command=self.decrypt_file, width=10
+            self.button_frame, text="Decrypt", command=self.decrypt_file, width=8
         )
-        self.decrypt_button.grid(row=1, column=3)
+        self.decrypt_button.grid(row=1, column=1)
 
         self.loaded_file_content = None
         self.encrypted_content = None
         self.decrypted_content = None
         self.encryption_mode = True  # True for encryption, False for decryption
+
+        # Key buttons
+        self.generate_key_button = tk.Button(
+            self.button_frame, text="Generate Key", command=self.generate_key, width=8
+        )
+        self.generate_key_button.grid(row=0, column=0)
+
+        self.upload_key_button = tk.Button(
+            self.button_frame, text="Load Key..", command=self.load_key, width=8
+        )
+        self.upload_key_button.grid(row=0, column=2)
+
+        self.save_output_button = tk.Button(
+            self.button_frame, text="Save output..", command=self.save_output, width=8
+        )
+        self.save_output_button.grid(row=1, column=2)
+
+    def generate_key(self):
+        self.cipher.key = os.urandom(32)
+        print(f"generate_key, self.cipher.key: {self.cipher.key}")
+        self.key_label.config(text="Key generated and loaded.")
+        self.save_key()  # Prompt to save the key after generating
+
+    def save_key(self):
+        if self.cipher.key:
+            file_path = filedialog.asksaveasfilename(
+                filetypes=[("Text Files", "*.txt")]
+            )
+            with open(file_path, "wb") as file:
+                file.write(self.cipher.key)
+            messagebox.showinfo("Key Saved", "Key saved successfully!")
+        else:
+            messagebox.showerror("Error", "No key generated to save!")
+
+    def load_key(self):
+        file_path = filedialog.askopenfilename(filetypes=[("Text Files", "*.txt")])
+        if file_path:
+            with open(file_path, "rb") as file:
+                self.cipher.key = file.read()
+                print(f"load_key, self.cipher.key: {self.cipher.key}")
+                self.key_label.config(text="Key loaded.")
+        else:
+            messagebox.showerror("Error", "No key uploaded!")
 
     def load_file(self):
         file_path = filedialog.askopenfilename(filetypes=[("All Files", "*.*")])
@@ -160,12 +205,14 @@ class GUI:
 
     def encrypt_file(self):
         if self.loaded_file_content:
-            key = os.urandom(32)  # Generate a new random key for encryption
-            iv = os.urandom(12)  # Generate a new random IV for encryption
+            if self.cipher.key is None:
+                messagebox.showerror("Error", "No key loaded!")
+                return
+            self.cipher.nonce = os.urandom(12)
+            print(f"encrypt file, self.cipher.nonce: {self.cipher.nonce}")
+            print(f"encrypt file, self.cipher.key: {self.cipher.key}")
             start = time.time()
-            self.encrypted_content = self.cipher.encrypt(
-                self.loaded_file_content, key, iv
-            )
+            self.encrypted_content = self.cipher.encrypt(self.loaded_file_content)
             end = time.time()
             print(
                 f"Encryption speed: {len(self.loaded_file_content) / (end - start)} B/s"
@@ -178,13 +225,14 @@ class GUI:
 
     def decrypt_file(self):
         if self.loaded_file_content:
-            # We assume that the key and IV are known
-            key = self.cipher.key  # Use the key from the ChaCha20 instance
-            iv = self.cipher.nonce  # Use the IV from the ChaCha20 instance
+            if self.cipher.key is None:
+                messagebox.showerror("Error", "No key loaded!")
+                return
+            self.cipher.nonce = os.urandom(12)
+            print(f"decrypt file, self.cipher.nonce: {self.cipher.nonce}")
+            print(f"decrypt file, self.cipher.key: {self.cipher.key}")
             start = time.time()
-            self.decrypted_content = self.cipher.decrypt(
-                self.loaded_file_content, key, iv
-            )
+            self.decrypted_content = self.cipher.decrypt(self.loaded_file_content)
             end = time.time()
             print(
                 f"Decryption speed: {len(self.loaded_file_content) / (end - start)} B/s"
