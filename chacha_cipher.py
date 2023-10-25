@@ -8,7 +8,7 @@ import os
 class ChaCha20:
     def __init__(self):
         self.key = None
-        self.nonce = None
+        self.iv = None
         self.counter = 0
 
     def quarter_round(self, a, b, c, d):
@@ -32,7 +32,7 @@ class ChaCha20:
         # ki vsebuje 16 32-bitnih števil.
         x = [0] * 16
         x[:4] = (0x61707865, 0x3320646E, 0x79622D32, 0x6B206574)  # Konstante
-        x[4:7] = self.nonce  # IV (številka zaporedja)
+        x[4:7] = self.iv  # IV (številka zaporedja)
         x[12] = self.counter & 0xFFFFFFFF
         x[13] = self.counter >> 32
         x[14:16] = self.key  # Ključ
@@ -95,18 +95,25 @@ class GUI:
         self.text_label = tk.Label(
             self.input_frame, text="Key:", width=8, font=("Helvetica", 13, "bold")
         )
-        self.text_label.grid(row=2, column=0)
+        self.text_label.grid(row=1, column=0)
         self.key_label = tk.Label(self.input_frame, text="<No key loaded>", width=45)
-        self.key_label.grid(row=2, column=1)
+        self.key_label.grid(row=1, column=1)
+
+        self.text_label = tk.Label(
+            self.input_frame, text="IV:", width=8, font=("Helvetica", 13, "bold")
+        )
+        self.text_label.grid(row=2, column=0)
+        self.iv_label = tk.Label(self.input_frame, text="<No IV loaded>", width=45)
+        self.iv_label.grid(row=2, column=1)
 
         self.output_label = tk.Label(
             self.input_frame, text="Output:", width=8, font=("Helvetica", 13, "bold")
         )
-        self.output_label.grid(row=1, column=0)
+        self.output_label.grid(row=3, column=0)
         self.output_file_label = tk.Label(
             self.input_frame, text="<Encrypt/Decrypt a file..>", width=45
         )
-        self.output_file_label.grid(row=1, column=1)
+        self.output_file_label.grid(row=3, column=1)
 
         # Button frame
         self.button_frame = tk.Frame(root)
@@ -118,42 +125,76 @@ class GUI:
             command=self.load_file,
             width=8,
         )
-        self.load_file_button.grid(row=0, column=1)
+        self.load_file_button.grid(row=0, column=0)
 
         self.encrypt_button = tk.Button(
             self.button_frame, text="Encrypt", command=self.encrypt_file, width=8
         )
-        self.encrypt_button.grid(row=1, column=0)
+        self.encrypt_button.grid(row=3, column=0)
 
         self.decrypt_button = tk.Button(
             self.button_frame, text="Decrypt", command=self.decrypt_file, width=8
         )
-        self.decrypt_button.grid(row=1, column=1)
+        self.decrypt_button.grid(row=3, column=1)
 
         self.loaded_file_content = None
         self.encrypted_content = None
         self.decrypted_content = None
         self.encryption_mode = True  # True for encryption, False for decryption
 
+        self.generate_iv_button = tk.Button(
+            self.button_frame, text="Generate IV", command=self.generate_iv, width=8
+        )
+        self.generate_iv_button.grid(row=2, column=0)
+
+        self.load_iv_button = tk.Button(
+            self.button_frame, text="Load IV..", command=self.load_iv, width=8
+        )
+        self.load_iv_button.grid(row=2, column=1)
+
         # Key buttons
         self.generate_key_button = tk.Button(
             self.button_frame, text="Generate Key", command=self.generate_key, width=8
         )
-        self.generate_key_button.grid(row=0, column=0)
+        self.generate_key_button.grid(row=1, column=0)
 
         self.upload_key_button = tk.Button(
             self.button_frame, text="Load Key..", command=self.load_key, width=8
         )
-        self.upload_key_button.grid(row=0, column=2)
+        self.upload_key_button.grid(row=1, column=1)
 
-        self.save_output_button = tk.Button(
-            self.button_frame, text="Save output..", command=self.save_output, width=8
-        )
-        self.save_output_button.grid(row=1, column=2)
+        # self.save_output_button = tk.Button(
+        #     self.button_frame, text="Save output..", command=self.save_output, width=8
+        # )
+        # self.save_output_button.grid(row=1, column=2)
+
+    def generate_iv(self):
+        self.cipher.iv = os.urandom(12)
+        self.iv_label.config(text="IV generated and loaded.")
+        self.save_iv()  # Prompt to save the IV after generating
+
+    def save_iv(self):
+        iv = self.cipher.iv
+        if iv:
+            file_path = filedialog.asksaveasfilename(
+                filetypes=[("Text Files", "*.txt")]
+            )
+            with open(file_path, "wb") as file:
+                file.write(iv)
+        else:
+            messagebox.showerror("Error", "No IV generated to save!")
+
+    def load_iv(self):
+        file_path = filedialog.askopenfilename(filetypes=[("Text Files", "*.txt")])
+        if file_path:
+            with open(file_path, "rb") as file:
+                self.cipher.iv = file.read()
+                self.iv_label.config(text="IV loaded.")
+        else:
+            messagebox.showerror("Error", "No IV uploaded!")
 
     def generate_key(self):
         self.cipher.key = os.urandom(32)
-        print(f"generate_key, self.cipher.key: {self.cipher.key}")
         self.key_label.config(text="Key generated and loaded.")
         self.save_key()  # Prompt to save the key after generating
 
@@ -164,7 +205,6 @@ class GUI:
             )
             with open(file_path, "wb") as file:
                 file.write(self.cipher.key)
-            messagebox.showinfo("Key Saved", "Key saved successfully!")
         else:
             messagebox.showerror("Error", "No key generated to save!")
 
@@ -181,10 +221,10 @@ class GUI:
     def load_file(self):
         file_path = filedialog.askopenfilename(filetypes=[("All Files", "*.*")])
         if file_path:
-            self.loaded_file_label.config(text=file_path.split("/")[-1])
+            self.loaded_file_label.config(text=f'"{file_path.split("/")[-1]}"')
             with open(file_path, "rb") as file:
                 self.loaded_file_content = file.read()
-                self.output_file_label.config(text="File loaded.")
+                self.output_file_label.config(text="File loaded and ready.")
         else:
             self.loaded_file_label.config(text="<No file loaded>")
             self.output_file_label.config(text="<Encrypt/Decrypt a file..>")
@@ -201,16 +241,12 @@ class GUI:
         file_path = filedialog.asksaveasfilename(filetypes=[("All Files", "*.*")])
         with open(file_path, "wb") as file:
             file.write(content)
-        messagebox.showinfo("Saved", "Output saved successfully!")
 
     def encrypt_file(self):
         if self.loaded_file_content:
             if self.cipher.key is None:
                 messagebox.showerror("Error", "No key loaded!")
                 return
-            self.cipher.nonce = os.urandom(12)
-            print(f"encrypt file, self.cipher.nonce: {self.cipher.nonce}")
-            print(f"encrypt file, self.cipher.key: {self.cipher.key}")
             start = time.time()
             self.encrypted_content = self.cipher.encrypt(self.loaded_file_content)
             end = time.time()
@@ -220,6 +256,7 @@ class GUI:
             print(f"Elapsed time: {end - start}s")
             self.output_file_label.config(text="File encrypted!")
             self.encryption_mode = True
+            self.save_output()
         else:
             messagebox.showerror("Error", "No file loaded!")
 
@@ -228,9 +265,6 @@ class GUI:
             if self.cipher.key is None:
                 messagebox.showerror("Error", "No key loaded!")
                 return
-            self.cipher.nonce = os.urandom(12)
-            print(f"decrypt file, self.cipher.nonce: {self.cipher.nonce}")
-            print(f"decrypt file, self.cipher.key: {self.cipher.key}")
             start = time.time()
             self.decrypted_content = self.cipher.decrypt(self.loaded_file_content)
             end = time.time()
@@ -240,6 +274,7 @@ class GUI:
             print(f"Elapsed time: {end - start}s")
             self.output_file_label.config(text="File decrypted!")
             self.encryption_mode = False
+            self.save_output()
         else:
             messagebox.showerror("Error", "No file loaded!")
 
