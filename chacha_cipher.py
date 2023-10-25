@@ -7,11 +7,13 @@ import os
 
 class ChaCha20:
     def __init__(self):
-        self.key = os.urandom(32)  # random 256-bit key
-        self.nonce = os.urandom(8)  # random 64-bit nonce
         self.counter = 0
 
     def quarterround(self, a, b, c, d):
+        # V tem koraku vsak izmed parametrov (a, b, c, d)
+        # sodeluje pri operacijah seštevanja, odštevanja in XOR-a.
+        # Rezultat vsake operacije je omejen na 32-bitno vrednost, kar je doseženo z uporabo
+        # maskiranja z 0xFFFFFFFF.
         a = (a + b) & 0xFFFFFFFF
         d = (d ^ a) & 0xFFFFFFFF
         c = (c + d) & 0xFFFFFFFF
@@ -23,40 +25,52 @@ class ChaCha20:
         return a, b, c, d
 
     def chacha_block(self):
+        # Funkcija za generiranje enega bloka. Vsak blok vsebuje 64 bajtov (512 bitov)
+        # keystreama, ki se uporablja za šifriranje podatkov. Blok inicializira stanje (state),
+        # ki vsebuje 16 32-bitnih števil.
         x = [0] * 16
-        x[:4] = (0x61707865, 0x3320646E, 0x79622D32, 0x6B206574)
-        x[4:7] = self.nonce
+        x[:4] = (0x61707865, 0x3320646E, 0x79622D32, 0x6B206574)  # Konstante
+        x[4:7] = self.nonce  # IV (številka zaporedja)
         x[12] = self.counter & 0xFFFFFFFF
         x[13] = self.counter >> 32
-        x[14:16] = self.key
+        x[14:16] = self.key  # Ključ
         state = x[:]
 
         for _ in range(10):
             for i in range(0, 16, 4):
+                # Izvedba 10 krogov četrt-rund na stanju. Vsak krog vpliva na vseh
+                # 16 32-bitnih števil v stanju.
                 state[i], state[i + 1], state[i + 2], state[i + 3] = self.quarterround(
                     state[i], state[i + 1], state[i + 2], state[i + 3]
                 )
             for i in range(16):
+                # Dodajanje stanja k začetnemu stanju (x) in omejitev
+                # na 32 bitov s pomočjo maskiranja z 0xFFFFFFFF.
                 state[i] = (state[i] + x[i]) & 0xFFFFFFFF
 
         packed_state = b"".join(struct.pack("<I", item) for item in state)
-
         return packed_state
 
-    def encrypt(self, plaintext):
+    def encrypt(self, plaintext, key, iv):
+        self.key = key
+        self.nonce = iv
         ciphertext = bytearray()
         self.counter = 0
 
         for i in range(0, len(plaintext), 64):
             keystream = self.chacha_block()
             for j in range(min(64, len(plaintext) - i)):
+                # Uporaba keystreama za XOR-anje podatkov v bloku s podatki.
                 ciphertext.append(plaintext[i + j] ^ keystream[j])
             self.counter += 1
 
         return ciphertext
 
-    def decrypt(self, ciphertext):
-        return self.encrypt(ciphertext)
+    def decrypt(self, ciphertext, key, iv):
+        # Dešifriranje se izvaja na enak način kot šifriranje, saj je ChaCha20
+        # simetrični algoritem. Znano mora biti enako stanje (ključ, IV) kot pri
+        # šifriranju.
+        return self.encrypt(ciphertext, key, iv)
 
 
 class GUI:
@@ -146,10 +160,17 @@ class GUI:
 
     def encrypt_file(self):
         if self.loaded_file_content:
+            key = os.urandom(32)  # Generate a new random key for encryption
+            iv = os.urandom(12)  # Generate a new random IV for encryption
             start = time.time()
-            self.encrypted_content = self.cipher.encrypt(self.loaded_file_content)
+            self.encrypted_content = self.cipher.encrypt(
+                self.loaded_file_content, key, iv
+            )
             end = time.time()
-            print(f"Encryption speed: {len(self.loaded_file_content)/(end-start)} B/s")
+            print(
+                f"Encryption speed: {len(self.loaded_file_content) / (end - start)} B/s"
+            )
+            print(f"Elapsed time: {end - start}s")
             self.output_file_label.config(text="File encrypted!")
             self.encryption_mode = True
         else:
@@ -157,10 +178,18 @@ class GUI:
 
     def decrypt_file(self):
         if self.loaded_file_content:
+            # We assume that the key and IV are known
+            key = self.cipher.key  # Use the key from the ChaCha20 instance
+            iv = self.cipher.nonce  # Use the IV from the ChaCha20 instance
             start = time.time()
-            self.decrypted_content = self.cipher.decrypt(self.loaded_file_content)
+            self.decrypted_content = self.cipher.decrypt(
+                self.loaded_file_content, key, iv
+            )
             end = time.time()
-            print(f"Decryption speed: {len(self.loaded_file_content)/(end-start)} B/s")
+            print(
+                f"Decryption speed: {len(self.loaded_file_content) / (end - start)} B/s"
+            )
+            print(f"Elapsed time: {end - start}s")
             self.output_file_label.config(text="File decrypted!")
             self.encryption_mode = False
         else:
