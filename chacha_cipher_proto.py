@@ -2,11 +2,69 @@ import tkinter as tk
 from tkinter import filedialog
 from tkinter import messagebox
 import struct
+import random
+import time
+
+CONST_QUARTERROUND = lambda a, b, c, d: ((a + b) % 232, d ^ a, c + d, (b + c) % 232)
+CHA_CONST = lambda a: (0x61707865, 0x3320646E, 0x79622D32, 0x6B206574)
 
 
 class ChaCha:
     def __init__(self):
-        pass
+        self.key = bytearray(32)
+        self.nonce = bytearray(12)
+        random.seed()
+        for i in range(32):
+            self.key[i] = random.randint(0, 255)
+        for i in range(12):
+            self.nonce[i] = random.randint(0, 255)
+
+    def quarterround(self, a, b, c, d):
+        return CONST_QUARTERROUND(a, b, c, d)
+
+    def chacha_block(self, counter):
+        x = [0] * 16
+        x[0:] = CHA_CONST(0)
+        x[4:8] = struct.unpack("<L", self.nonce[:4])
+        x[8:12] = struct.unpack("<L", self.nonce[4:8])
+        x[12] = counter >> 32
+        x[13] = counter & 0xFFFFFFFF
+        x[14:16] = struct.unpack("<L", self.key[:4])
+
+        for i in range(10):
+            for j in range(16):
+                x[j] += self.key[(j % 16)]
+                self.quarterround(
+                    x[(j - 1) % 16], x[j], x[(j + 1) % 16], x[(j + 14) % 16]
+                )
+
+        out = bytearray(64)
+        for i in range(16):
+            out[i * 4 : (i + 1) * 4] = struct.pack("<L", x[i])
+
+        return out
+
+    def encrypt(self, plaintext):
+        counter = 0
+        ciphertext = bytearray()
+        for i in range(0, len(plaintext), 64):
+            block = self.chacha_block(counter)
+            for j in range(min(64, len(plaintext) - i)):
+                ciphertext.append(plaintext[i + j] ^ block[j])
+            counter += 1
+
+        return ciphertext
+
+    def decrypt(self, ciphertext):
+        counter = 0
+        plaintext = bytearray()
+        for i in range(0, len(ciphertext), 64):
+            block = self.chacha_block(counter)
+            for j in range(min(64, len(ciphertext) - i)):
+                plaintext.append(ciphertext[i + j] ^ block[j])
+            counter += 1
+
+        return plaintext
 
 
 class GUI:
@@ -85,10 +143,28 @@ class GUI:
         messagebox.showinfo("Saved", "Output saved successfully!")
 
     def encrypt_file(self):
-        pass
+        if self.loaded_file_content:
+            start = time.time()
+            ciphertext = self.cipher.encrypt(self.loaded_file_content)
+            end = time.time()
+            print(
+                f"Encryption speed: {len(self.loaded_file_content)/(end-start)/1000} kB/s"
+            )
+            self.output_file_label.config(text="File encrypted!")
+        else:
+            messagebox.showerror("Error", "No file loaded!")
 
     def decrypt_file(self):
-        pass
+        if self.loaded_file_content:
+            start = time.time()
+            plaintext = self.cipher.decrypt(self.loaded_file_content)
+            end = time.time()
+            print(
+                f"Decryption speed: {len(self.loaded_file_content)/(end-start)/1000} kB/s"
+            )
+            self.output_file_label.config(text="File decrypted!")
+        else:
+            messagebox.showerror("Error", "No file loaded!")
 
 
 if __name__ == "__main__":
