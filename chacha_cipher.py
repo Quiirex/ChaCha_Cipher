@@ -1,5 +1,5 @@
-import tkinter as tk
 from tkinter import filedialog, messagebox
+import tkinter as tk
 import struct
 import time
 import os
@@ -237,9 +237,9 @@ class GUI:
             print(f"Encryption finished!")
             end = time.time()
             print(
-                f"Encryption speed: {len(self.loaded_file_content) / (end - start)} B/s"
+                f"Encryption speed: {round((len(self.loaded_file_content) / (end - start)), 2)} B/s"
             )
-            print(f"Elapsed time: {end - start}s")
+            print(f"Elapsed time: {round((end - start), 2)}s")
             self.output_file_label.config(text="File encrypted!")
             self.encryption_mode = True
             self.save_output()
@@ -257,9 +257,9 @@ class GUI:
             print(f"Decryption finished!")
             end = time.time()
             print(
-                f"Decryption speed: {len(self.loaded_file_content) / (end - start)} B/s"
+                f"Decryption speed: {round((len(self.loaded_file_content) / (end - start)), 2)} B/s"
             )
-            print(f"Elapsed time: {end - start}s")
+            print(f"Elapsed time: {round((end - start), 2)}s")
             self.output_file_label.config(text="File decrypted!")
             self.encryption_mode = False
             self.save_output()
