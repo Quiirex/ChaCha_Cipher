@@ -12,10 +12,8 @@ class ChaCha20:
         self.counter = 0
 
     def quarter_round(self, a, b, c, d):
-        # V tem koraku vsak izmed parametrov (a, b, c, d)
-        # sodeluje pri operacijah seštevanja, odštevanja in XOR-a.
-        # Rezultat vsake operacije je omejen na 32-bitno vrednost, kar je doseženo z uporabo
-        # maskiranja z 0xFFFFFFFF.
+        # Seštevanje, odštevanje in XOR-anje.
+        # Rezultat vsake operacije je omejen na 32-bitno vrednost, ostalo se odreže.
         a = (a + b) & 0xFFFFFFFF
         d = (d ^ a) & 0xFFFFFFFF
         c = (c + d) & 0xFFFFFFFF
@@ -27,27 +25,24 @@ class ChaCha20:
         return a, b, c, d
 
     def chacha_block(self):
-        # Funkcija za generiranje enega bloka. Vsak blok vsebuje 64 bajtov (512 bitov)
-        # keystreama, ki se uporablja za šifriranje podatkov. Blok inicializira stanje (state),
-        # ki vsebuje 16 32-bitnih števil.
+        # Generiranje enega bloka. Vsak blok vsebuje 64 bajtov (512 bitov) toka ključev.
+        # Blok inicializira stanje, ki vsebuje 16 32-bitnih števil.
         x = [0] * 16
         x[:4] = (0x61707865, 0x3320646E, 0x79622D32, 0x6B206574)  # Konstante
-        x[4:7] = self.iv  # IV (številka zaporedja)
+        x[4:7] = self.iv
         x[12] = self.counter & 0xFFFFFFFF
         x[13] = self.counter >> 32
-        x[14:16] = self.key  # Ključ
+        x[14:16] = self.key
         state = x[:]
 
         for _ in range(10):
             for i in range(0, 16, 4):
-                # Izvedba 10 krogov četrt-rund na stanju. Vsak krog vpliva na vseh
-                # 16 32-bitnih števil v stanju.
+                # Izvedba 10 krogov četrt-rund na stanju. Vsak krog vpliva na vseh 16 32-bitnih števil v stanju.
                 state[i], state[i + 1], state[i + 2], state[i + 3] = self.quarter_round(
                     state[i], state[i + 1], state[i + 2], state[i + 3]
                 )
             for i in range(16):
-                # Dodajanje stanja k začetnemu stanju (x) in omejitev
-                # na 32 bitov s pomočjo maskiranja z 0xFFFFFFFF.
+                # Dodajanje stanja k začetnemu stanju (x) in omejitev na 32 bitov
                 state[i] = (state[i] + x[i]) & 0xFFFFFFFF
 
         packed_state = b"".join(struct.pack("<I", item) for item in state)
@@ -60,16 +55,14 @@ class ChaCha20:
         for i in range(0, len(plaintext), 64):
             keystream = self.chacha_block()
             for j in range(min(64, len(plaintext) - i)):
-                # Uporaba keystreama za XOR-anje podatkov v bloku s podatki.
+                # Uporaba toka ključev za XOR-anje podatkov v bloku s podatki.
                 ciphertext.append(plaintext[i + j] ^ keystream[j])
             self.counter += 1
 
         return ciphertext
 
     def decrypt(self, ciphertext):
-        # Dešifriranje se izvaja na enak način kot šifriranje, saj je ChaCha20
-        # simetrični algoritem. Znano mora biti enako stanje (ključ, IV) kot pri
-        # šifriranju.
+        # Za dešifriranje potrebujemo enako stanje (ključ, IV) kot pri šifriranju.
         return self.encrypt(ciphertext)
 
 
@@ -140,7 +133,7 @@ class GUI:
         self.loaded_file_content = None
         self.encrypted_content = None
         self.decrypted_content = None
-        self.encryption_mode = True  # True for encryption, False for decryption
+        self.encryption_mode = True  # True za šifriranje, False za dešifriranje
 
         self.generate_iv_button = tk.Button(
             self.button_frame, text="Generate IV", command=self.generate_iv, width=8
@@ -162,11 +155,6 @@ class GUI:
             self.button_frame, text="Load Key..", command=self.load_key, width=8
         )
         self.upload_key_button.grid(row=1, column=1)
-
-        # self.save_output_button = tk.Button(
-        #     self.button_frame, text="Save output..", command=self.save_output, width=8
-        # )
-        # self.save_output_button.grid(row=1, column=2)
 
     def generate_iv(self):
         self.cipher.iv = os.urandom(12)
