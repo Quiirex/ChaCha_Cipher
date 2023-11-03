@@ -72,7 +72,6 @@ class GUI:
         self.root.title("ChaCha20 Cipher")
         self.cipher = ChaCha20()
 
-        # Input frame
         self.input_frame = tk.Frame(root)
         self.input_frame.grid(row=0, column=0, padx=20, pady=20)
 
@@ -108,7 +107,6 @@ class GUI:
         )
         self.output_file_label.grid(row=3, column=1)
 
-        # Button frame
         self.button_frame = tk.Frame(root)
         self.button_frame.grid(row=4, column=0, padx=20, pady=20)
 
@@ -145,7 +143,6 @@ class GUI:
         )
         self.load_iv_button.grid(row=2, column=1)
 
-        # Key buttons
         self.generate_key_button = tk.Button(
             self.button_frame, text="Generate Key", command=self.generate_key, width=8
         )
@@ -159,7 +156,7 @@ class GUI:
     def generate_iv(self):
         self.cipher.iv = os.urandom(12)
         self.iv_label.config(text="IV generated and loaded.")
-        self.save_iv()  # Prompt to save the IV after generating
+        self.save_iv()
 
     def save_iv(self):
         iv = self.cipher.iv
@@ -184,7 +181,7 @@ class GUI:
     def generate_key(self):
         self.cipher.key = os.urandom(32)
         self.key_label.config(text="Key generated and loaded.")
-        self.save_key()  # Prompt to save the key after generating
+        self.save_key()
 
     def save_key(self):
         if self.cipher.key:
