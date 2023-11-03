@@ -198,7 +198,6 @@ class GUI:
         if file_path:
             with open(file_path, "rb") as file:
                 self.cipher.key = file.read()
-                print(f"load_key, self.cipher.key: {self.cipher.key}")
                 self.key_label.config(text="Key loaded.")
         else:
             messagebox.showerror("Error", "No key uploaded!")
@@ -233,7 +232,9 @@ class GUI:
                 messagebox.showerror("Error", "No key loaded!")
                 return
             start = time.time()
+            print(f"Starting encryption..")
             self.encrypted_content = self.cipher.encrypt(self.loaded_file_content)
+            print(f"Encryption finished!")
             end = time.time()
             print(
                 f"Encryption speed: {len(self.loaded_file_content) / (end - start)} B/s"
@@ -251,7 +252,9 @@ class GUI:
                 messagebox.showerror("Error", "No key loaded!")
                 return
             start = time.time()
+            print(f"Starting decryption..")
             self.decrypted_content = self.cipher.decrypt(self.loaded_file_content)
+            print(f"Decryption finished!")
             end = time.time()
             print(
                 f"Decryption speed: {len(self.loaded_file_content) / (end - start)} B/s"
