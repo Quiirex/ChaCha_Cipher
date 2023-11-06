@@ -8,7 +8,7 @@ import os
 class ChaCha20:
     def __init__(self):
         self.key = None
-        self.iv = None
+        self.nonce = None
         self.counter = 0
 
     def quarter_round(self, a, b, c, d):
@@ -29,7 +29,7 @@ class ChaCha20:
         # Blok inicializira stanje, ki vsebuje 16 32-bitnih števil.
         x = [0] * 16
         x[:4] = (0x61707865, 0x3320646E, 0x79622D32, 0x6B206574)  # Konstante
-        x[4:7] = self.iv
+        x[4:7] = self.nonce
         x[12] = self.counter & 0xFFFFFFFF
         x[13] = self.counter >> 32
         x[14:16] = self.key
@@ -62,7 +62,7 @@ class ChaCha20:
         return ciphertext
 
     def decrypt(self, ciphertext):
-        # Za dešifriranje potrebujemo enako stanje (ključ, IV) kot pri šifriranju.
+        # Za dešifriranje potrebujemo enako stanje (ključ, nonce) kot pri šifriranju.
         return self.encrypt(ciphertext)
 
 
@@ -92,11 +92,13 @@ class GUI:
         self.key_label.grid(row=1, column=1)
 
         self.text_label = tk.Label(
-            self.input_frame, text="IV:", width=8, font=("Helvetica", 13, "bold")
+            self.input_frame, text="Nonce:", width=8, font=("Helvetica", 13, "bold")
         )
         self.text_label.grid(row=2, column=0)
-        self.iv_label = tk.Label(self.input_frame, text="<No IV loaded>", width=45)
-        self.iv_label.grid(row=2, column=1)
+        self.nonce_label = tk.Label(
+            self.input_frame, text="<No nonce loaded>", width=45
+        )
+        self.nonce_label.grid(row=2, column=1)
 
         self.output_label = tk.Label(
             self.input_frame, text="Output:", width=8, font=("Helvetica", 13, "bold")
@@ -112,7 +114,7 @@ class GUI:
 
         self.load_file_button = tk.Button(
             self.button_frame,
-            text="Load File..",
+            text="Load file..",
             command=self.load_file,
             width=8,
         )
@@ -133,50 +135,53 @@ class GUI:
         self.decrypted_content = None
         self.encryption_mode = True  # True za šifriranje, False za dešifriranje
 
-        self.generate_iv_button = tk.Button(
-            self.button_frame, text="Generate IV", command=self.generate_iv, width=8
+        self.generate_nonce_button = tk.Button(
+            self.button_frame,
+            text="Generate nonce",
+            command=self.generate_nonce,
+            width=8,
         )
-        self.generate_iv_button.grid(row=2, column=0)
+        self.generate_nonce_button.grid(row=2, column=0)
 
-        self.load_iv_button = tk.Button(
-            self.button_frame, text="Load IV..", command=self.load_iv, width=8
+        self.load_nonce_button = tk.Button(
+            self.button_frame, text="Load nonce..", command=self.load_nonce, width=8
         )
-        self.load_iv_button.grid(row=2, column=1)
+        self.load_nonce_button.grid(row=2, column=1)
 
         self.generate_key_button = tk.Button(
-            self.button_frame, text="Generate Key", command=self.generate_key, width=8
+            self.button_frame, text="Generate key", command=self.generate_key, width=8
         )
         self.generate_key_button.grid(row=1, column=0)
 
         self.upload_key_button = tk.Button(
-            self.button_frame, text="Load Key..", command=self.load_key, width=8
+            self.button_frame, text="Load key..", command=self.load_key, width=8
         )
         self.upload_key_button.grid(row=1, column=1)
 
-    def generate_iv(self):
-        self.cipher.iv = os.urandom(12)
-        self.iv_label.config(text="IV generated and loaded.")
-        self.save_iv()
+    def generate_nonce(self):
+        self.cipher.nonce = os.urandom(12)
+        self.nonce_label.config(text="Nonce generated and loaded.")
+        self.save_nonce()
 
-    def save_iv(self):
-        iv = self.cipher.iv
-        if iv:
+    def save_nonce(self):
+        nonce = self.cipher.nonce
+        if nonce:
             file_path = filedialog.asksaveasfilename(
                 filetypes=[("Text Files", "*.txt")]
             )
             with open(file_path, "wb") as file:
-                file.write(iv)
+                file.write(nonce)
         else:
-            messagebox.showerror("Error", "No IV generated to save!")
+            messagebox.showerror("Error", "No nonce generated to save!")
 
-    def load_iv(self):
+    def load_nonce(self):
         file_path = filedialog.askopenfilename(filetypes=[("Text Files", "*.txt")])
         if file_path:
             with open(file_path, "rb") as file:
-                self.cipher.iv = file.read()
-                self.iv_label.config(text="IV loaded.")
+                self.cipher.nonce = file.read()
+                self.nonce_label.config(text="nonce loaded.")
         else:
-            messagebox.showerror("Error", "No IV uploaded!")
+            messagebox.showerror("Error", "No nonce uploaded!")
 
     def generate_key(self):
         self.cipher.key = os.urandom(32)
@@ -211,7 +216,7 @@ class GUI:
                 self.output_file_label.config(text="File loaded and ready.")
         else:
             self.loaded_file_label.config(text="<No file loaded>")
-            self.output_file_label.config(text="<Encrypt/Decrypt a file..>")
+            self.output_file_label.config(text="<Encrypt/decrypt a file..>")
 
     def save_output(self):
         if self.encryption_mode and self.encrypted_content:
