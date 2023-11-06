@@ -12,7 +12,7 @@ class ChaCha20:
         self.counter = 0
 
     def quarter_round(self, a, b, c, d):
-        # Seštevanje, odštevanje in XOR-anje.
+        # Seštevanje, rotiranje in XOR-anje (ARX operacije)
         # Rezultat vsake operacije je omejen na 32-bitno vrednost, ostalo se odreže.
         a = (a + b) & 0xFFFFFFFF
         d = (d ^ a) & 0xFFFFFFFF
@@ -49,7 +49,7 @@ class ChaCha20:
                     state[i], state[i + 1], state[i + 2], state[i + 3]
                 )
             for i in range(16):
-                # Dodajanje stanja k začetnemu stanju (x) in omejitev na 32 bitov, ostalo se odreže.
+                # Dodajanje stanja k začetnemu stanju (x) in omejitev na 32 bitov.
                 state[i] = (state[i] + state[i]) & 0xFFFFFFFF
 
         packed_state = b"".join(struct.pack("<I", item) for item in state)
