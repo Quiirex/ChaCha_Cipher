@@ -42,7 +42,7 @@ class ChaCha20:
                     state[i], state[i + 1], state[i + 2], state[i + 3]
                 )
             for i in range(16):
-                # Dodajanje stanja k začetnemu stanju (x) in omejitev na 32 bitov
+                # Dodajanje stanja k začetnemu stanju (x) in omejitev na 32 bitov, ostalo se odreže.
                 state[i] = (state[i] + x[i]) & 0xFFFFFFFF
 
         packed_state = b"".join(struct.pack("<I", item) for item in state)
