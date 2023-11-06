@@ -25,25 +25,24 @@ class ChaCha20:
         return a, b, c, d
 
     def chacha_block(self):
-        # Generiranje enega bloka. Vsak blok vsebuje 64 bajtov (512 bitov) toka ključev.
         # Blok inicializira stanje, ki vsebuje 16 32-bitnih števil.
-        x = [0] * 16
-        x[:4] = (0x61707865, 0x3320646E, 0x79622D32, 0x6B206574)  # Konstante
-        x[4:7] = self.nonce
-        x[12] = self.counter & 0xFFFFFFFF
-        x[13] = self.counter >> 32
-        x[14:16] = self.key
-        state = x[:]
+        state = [0] * 16
+        state[:4] = (0x61707865, 0x3320646E, 0x79622D32, 0x6B206574)  # Konstante
+        state[4:12] = self.key
+        state[12] = self.counter & 0xFFFFFFFF
+        state[13] = (self.counter >> 32) & 0xFFFFFFFF
+        state[14:16] = self.nonce
 
         for _ in range(10):
             for i in range(0, 16, 4):
-                # Izvedba 10 krogov četrt-rund na stanju. Vsak krog vpliva na vseh 16 32-bitnih števil v stanju.
+                # Izvedba 10 krogov četrt-rund na stanju.
+                # Vsak krog vpliva na vseh 16 32-bitnih števil v stanju.
                 state[i], state[i + 1], state[i + 2], state[i + 3] = self.quarter_round(
                     state[i], state[i + 1], state[i + 2], state[i + 3]
                 )
             for i in range(16):
                 # Dodajanje stanja k začetnemu stanju (x) in omejitev na 32 bitov, ostalo se odreže.
-                state[i] = (state[i] + x[i]) & 0xFFFFFFFF
+                state[i] = (state[i] + state[i]) & 0xFFFFFFFF
 
         packed_state = b"".join(struct.pack("<I", item) for item in state)
         return packed_state
