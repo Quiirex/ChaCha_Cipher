@@ -27,10 +27,19 @@ class ChaCha20:
     def chacha_block(self):
         # Blok inicializira stanje, ki vsebuje 16 32-bitnih števil.
         state = [0] * 16
-        state[:4] = (0x61707865, 0x3320646E, 0x79622D32, 0x6B206574)  # Konstante
-        state[4:12] = struct.unpack("<IIIIIIII", self.key)
-        state[12] = self.counter & 0xFFFFFFFF
-        state[13:16] = struct.unpack("<III", self.nonce)
+        state[:4] = (
+            0x61707865,
+            0x3320646E,
+            0x79622D32,
+            0x6B206574,
+        )  # 128-bitov konstant
+        state[4:12] = struct.unpack(
+            "<IIIIIIII", self.key
+        )  # razdeli ključ na 8 32-bitnih števil (256 bitov)
+        state[12] = self.counter & 0xFFFFFFFF  # 32-bitni števec
+        state[13:16] = struct.unpack(
+            "<III", self.nonce
+        )  # razdeli nonce na 3 32-bitna števila (96 bitov)
 
         for _ in range(10):
             for i in range(0, 16, 4):
