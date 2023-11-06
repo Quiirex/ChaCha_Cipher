@@ -28,10 +28,9 @@ class ChaCha20:
         # Blok inicializira stanje, ki vsebuje 16 32-bitnih števil.
         state = [0] * 16
         state[:4] = (0x61707865, 0x3320646E, 0x79622D32, 0x6B206574)  # Konstante
-        state[4:12] = self.key
+        state[4:12] = struct.unpack("<IIIIIIII", self.key)
         state[12] = self.counter & 0xFFFFFFFF
-        state[13] = (self.counter >> 32) & 0xFFFFFFFF
-        state[14:16] = self.nonce
+        state[13:16] = struct.unpack("<III", self.nonce)
 
         for _ in range(10):
             for i in range(0, 16, 4):
