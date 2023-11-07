@@ -43,7 +43,7 @@ class ChaCha20:
 
         for _ in range(10):
             for i in range(0, 16, 4):
-                # Izvedba 10 krogov četrt-rund na stanju.
+                # Izvedba 10 iteracij četrt-rund na stanju.
                 # Vsak krog vpliva na vseh 16 32-bitnih števil v stanju.
                 state[i], state[i + 1], state[i + 2], state[i + 3] = self.quarter_round(
                     state[i], state[i + 1], state[i + 2], state[i + 3]
