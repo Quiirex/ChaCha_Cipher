@@ -25,33 +25,48 @@ class ChaCha20:
         return a, b, c, d
 
     def chacha_block(self):
-        # Blok inicializira stanje, ki vsebuje 16 32-bitnih števil.
         state = [0] * 16
         state[:4] = (
             0x61707865,
             0x3320646E,
             0x79622D32,
             0x6B206574,
-        )  # 128-bitov konstant
+        )  # 128-bitne konstante ("expand 32-byte k")
         state[4:12] = struct.unpack(
             "<IIIIIIII", self.key
-        )  # razdeli ključ na 8 32-bitnih števil (256 bitov)
+        )  # Razdeli ključ na 8 32-bitnih blokov (256 bitov)
         state[12] = self.counter & 0xFFFFFFFF  # 32-bitni števec
         state[13:16] = struct.unpack(
             "<III", self.nonce
-        )  # razdeli nonce na 3 32-bitna števila (96 bitov)
+        )  # Razdeli nonce na 3 32-bitnih blokov (96 bitov)
 
-        # Izvedba 10 iteracij četrt-rund na stanju.
+        # Izvedi 10 iteracij (krogov) ChaCha20
         for _ in range(10):
+            # Operacija za stolpce (Quarter Rounds 1-4)
             for i in range(0, 16, 4):
-                # Vsak krog vpliva na vseh 16 32-bitnih števil v stanju.
                 state[i], state[i + 1], state[i + 2], state[i + 3] = self.quarter_round(
                     state[i], state[i + 1], state[i + 2], state[i + 3]
                 )
+
+            # Operacija za diagonale (Quarter Rounds 5-8)
+            state[0], state[5], state[10], state[15] = self.quarter_round(
+                state[0], state[5], state[10], state[15]
+            )
+            state[1], state[6], state[11], state[12] = self.quarter_round(
+                state[1], state[6], state[11], state[12]
+            )
+            state[2], state[7], state[8], state[13] = self.quarter_round(
+                state[2], state[7], state[8], state[13]
+            )
+            state[3], state[4], state[9], state[14] = self.quarter_round(
+                state[3], state[4], state[9], state[14]
+            )
+
+            # Mešalni korak: Prištej trenutno stanje samemu sebi modulo 2^32
             for i in range(16):
-                # Dodajanje stanja k začetnemu stanju (x) in omejitev na 32 bitov.
                 state[i] = (state[i] + state[i]) & 0xFFFFFFFF
 
+        # Pretvori spremenjeno stanje v niz bajtov
         packed_state = b"".join(struct.pack("<I", item) for item in state)
         return packed_state
 
