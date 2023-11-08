@@ -62,7 +62,7 @@ class ChaCha20:
                 state[3], state[4], state[9], state[14]
             )
 
-            # Mešalni korak: Prištej trenutno stanje samemu sebi modulo 2^32
+            # Seštevanje brez prenosa - zagotavljanje, da stanje ne bo preseglo 32-bitne vrednosti
             for i in range(16):
                 state[i] = (state[i] + state[i]) & 0xFFFFFFFF
 
