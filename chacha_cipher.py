@@ -16,12 +16,16 @@ class ChaCha20:
         # Rezultat vsake operacije je omejen na 32-bitno vrednost, ostalo se odreže.
         a = (a + b) & 0xFFFFFFFF
         d = (d ^ a) & 0xFFFFFFFF
+        d = ((d << 16) | (d >> 16)) & 0xFFFFFFFF  # Rotatiranje bitov za d
         c = (c + d) & 0xFFFFFFFF
         b = (b ^ c) & 0xFFFFFFFF
+        b = ((b << 12) | (b >> 20)) & 0xFFFFFFFF  # Rotatiranje bitov za b
         a = (a + b) & 0xFFFFFFFF
         d = (d ^ a) & 0xFFFFFFFF
+        d = ((d << 8) | (d >> 24)) & 0xFFFFFFFF  # Rotatiranje bitov za d
         c = (c + d) & 0xFFFFFFFF
         b = (b ^ c) & 0xFFFFFFFF
+        b = ((b << 7) | (b >> 25)) & 0xFFFFFFFF  # Rotatiranje bitov za b
         return a, b, c, d
 
     def chacha_block(self):
@@ -31,6 +35,7 @@ class ChaCha20:
             0x3320646E,
             0x79622D32,
             0x6B206574,
+            2,
         )  # 128-bitne konstante ("expand 32-byte k")
         state[4:12] = struct.unpack(
             "<IIIIIIII", self.key
