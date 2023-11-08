@@ -45,15 +45,23 @@ class ChaCha20:
             "<III", self.nonce
         )  # Razdeli nonce na 3 32-bitnih blokov (96 bitov)
 
-        # Izvedi 10 iteracij (krogov) ChaCha20
+        # Izvedi 10 iteracij dvojnih rund ChaCha20
         for _ in range(10):
-            # Operacija za stolpce (Quarter Rounds 1-4) - liha runda
-            for i in range(0, 16, 4):
-                state[i], state[i + 1], state[i + 2], state[i + 3] = self.quarter_round(
-                    state[i], state[i + 1], state[i + 2], state[i + 3]
-                )
+            # Runda za stolpce (Quarter Rounds 1-4) - liha runda
+            state[0], state[4], state[8], state[12] = self.quarter_round(
+                state[0], state[4], state[8], state[12]
+            )
+            state[1], state[5], state[9], state[13] = self.quarter_round(
+                state[1], state[5], state[9], state[13]
+            )
+            state[2], state[6], state[10], state[14] = self.quarter_round(
+                state[2], state[6], state[10], state[14]
+            )
+            state[3], state[7], state[11], state[15] = self.quarter_round(
+                state[3], state[7], state[11], state[15]
+            )
 
-            # Operacija za diagonale (Quarter Rounds 5-8) - soda runda
+            # Runda za diagonale (Quarter Rounds 5-8) - soda runda
             state[0], state[5], state[10], state[15] = self.quarter_round(
                 state[0], state[5], state[10], state[15]
             )
