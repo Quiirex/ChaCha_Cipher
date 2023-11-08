@@ -42,13 +42,13 @@ class ChaCha20:
 
         # Izvedi 10 iteracij (krogov) ChaCha20
         for _ in range(10):
-            # Operacija za stolpce (Quarter Rounds 1-4)
+            # Operacija za stolpce (Quarter Rounds 1-4) - liha runda
             for i in range(0, 16, 4):
                 state[i], state[i + 1], state[i + 2], state[i + 3] = self.quarter_round(
                     state[i], state[i + 1], state[i + 2], state[i + 3]
                 )
 
-            # Operacija za diagonale (Quarter Rounds 5-8)
+            # Operacija za diagonale (Quarter Rounds 5-8) - soda runda
             state[0], state[5], state[10], state[15] = self.quarter_round(
                 state[0], state[5], state[10], state[15]
             )
@@ -62,7 +62,7 @@ class ChaCha20:
                 state[3], state[4], state[9], state[14]
             )
 
-            # Seštevanje brez prenosa - zagotavljanje, da stanje ne bo preseglo 32-bitne vrednosti
+            # Seštevanje brez prenosa - zagotavljanje, da element v stanju ne bo presegal 32-bitne vrednosti
             for i in range(16):
                 state[i] = (state[i] + state[i]) & 0xFFFFFFFF
 
