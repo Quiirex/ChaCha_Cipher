@@ -75,9 +75,9 @@ class ChaCha20:
                 state[3], state[4], state[9], state[14]
             )
 
-            # Seštevanje brez prenosa - zagotavljanje, da element v stanju ne bo presegal 32-bitne vrednosti
-            for i in range(16):
-                state[i] = (state[i] + state[i]) & 0xFFFFFFFF
+        # Seštevanje brez prenosa - zagotavljanje, da element v stanju ne bo presegal 32-bitne vrednosti
+        for i in range(16):
+            state[i] = (state[i] + state[i]) & 0xFFFFFFFF
 
         # Pretvori spremenjeno stanje v niz bajtov
         packed_state = b"".join(struct.pack("<I", item) for item in state)
