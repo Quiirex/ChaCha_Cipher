@@ -35,7 +35,6 @@ class ChaCha20:
             0x3320646E,
             0x79622D32,
             0x6B206574,
-            2,
         )  # 128-bitne konstante ("expand 32-byte k")
         state[4:12] = struct.unpack(
             "<IIIIIIII", self.key
