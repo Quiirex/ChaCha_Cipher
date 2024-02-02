@@ -1,6 +1,6 @@
 # ChaCha(20) Cipher
 
-A python + tkinter application of the ChaCha(20) cipher.
+A python + tkinter implementation of the ChaCha(20) cipher from scratch.
 
 ## The background
 
